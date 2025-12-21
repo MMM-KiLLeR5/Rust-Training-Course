@@ -20,8 +20,35 @@ use std::rc::Rc;
 //
 // Use `Box` if needed
 
-// IMPLEMENT HERE:
+pub struct BinaryTreeNode {
+    value: i32,
+    left_child: Option<Box<BinaryTreeNode>>,
+    right_child: Option<Box<BinaryTreeNode>>,
+}
 
+impl BinaryTreeNode {
+    pub fn new(value: i32) -> Self {
+        BinaryTreeNode {
+            value,
+            left_child: None,
+            right_child: None,
+        }
+    }
+
+    pub fn with_children(value: i32, left_child: BinaryTreeNode, right_child: BinaryTreeNode) -> Self {
+        BinaryTreeNode {
+            value,
+            left_child: Some(Box::new(left_child)),
+            right_child: Some(Box::new(right_child)),
+        }
+    }
+
+    pub fn sum(&self) -> i32 {
+        let left_sum = self.left_child.as_ref().map_or(0, |node| node.sum());
+        let right_sum = self.right_child.as_ref().map_or(0, |node| node.sum());
+        self.value + left_sum + right_sum
+    }
+}
 // Rc
 // ================================================================================================
 
@@ -41,11 +68,51 @@ use std::rc::Rc;
 // Write a test which will reuse the created Packages in several other Packages as dependencies.
 // Use `Rc` in the `Package` struct where needed to avoid deep clone.
 
-// IMPLEMENT HERE:
+#[derive(Clone)]
+pub struct Package {
+    name: String,
+    dependencies: Rc<RefCell<Vec<Rc<Package>>>>,
+}
+
+impl Package {
+    pub fn new(name: &str) -> Self {
+        Package {
+            name: name.to_string(),
+            dependencies: Rc::new(RefCell::new(Vec::new())),
+        }
+    }
+
+    pub fn with_dependencies(name: &str, dependencies: Vec<Rc<Package>>) -> Self {
+        Package {
+            name: name.to_string(),
+            dependencies: Rc::new(RefCell::new(dependencies)),
+        }
+    }
+
+    pub fn list_dependencies(package: Rc<Package>) -> Vec<String> {
+        let mut result = Vec::new();
+        result.push(package.name.clone());
+
+        for dep in package.dependencies.borrow().iter() {
+            result.append(&mut Self::list_dependencies(dep.clone()));
+        }
+
+        result
+    }
+}
 
 #[test]
 fn test_list_dependencies() {
-    // IMPLEMENT HERE:
+    let package_a = Rc::new(Package::new("A"));
+    let package_b = Rc::new(Package::new("B"));
+    let package_c = Rc::new(Package::new("C"));
+
+    let mut package_d = Package::with_dependencies("D", vec![package_a.clone(), package_b.clone()]);
+    package_d.dependencies.borrow_mut().push(package_c.clone());
+
+    let dependencies = Package::list_dependencies(Rc::new(package_d));
+    
+    assert_eq!(dependencies, vec!["D", "A", "B", "C"]);
 }
 
 // RefCell
@@ -60,19 +127,22 @@ fn test_list_dependencies() {
 
 // IMPLEMENT HERE:
 pub struct SharedCounter {
-    value: i32,
+    value: RefCell<i32>,
 }
 
 impl SharedCounter {
     pub fn new() -> Self {
-        !unimplemented!()
+        SharedCounter {
+            value: RefCell::new(0),
+        }
     }
 
     pub fn increment(&self) {
-        !unimplemented!()
+        let mut value = self.value.borrow_mut();
+        *value += 1;
     }
 
     pub fn get(&self) -> i32 {
-        !unimplemented!()
+        *self.value.borrow()
     }
 }
